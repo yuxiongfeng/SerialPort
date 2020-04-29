@@ -47,6 +47,14 @@ public class SerialInputOutputManager implements Runnable {
     private final ByteBuffer mReadBuffer = ByteBuffer.allocate(BUFSIZ);
     private final ByteBuffer mWriteBuffer = ByteBuffer.allocate(BUFSIZ); // Synchronized by 'mWriteBuffer'
 
+    /**
+     * 标志位，如：发送一次指令后是否所有数据都返回
+     * 字段设计来由：由于接口没有给一次请求什么时候结束的回调，经过分析自己判断
+     * len = mSerialPort.read(mReadBuffer.array(), mReadTimeout);
+     * 如果请求完成上面代码执行后不会再往下执行
+     */
+    private boolean completeFlag = false;
+
     public enum State {
         STOPPED,
         RUNNING,
@@ -133,7 +141,6 @@ public class SerialInputOutputManager implements Runnable {
      * <p>
      * NOTE(mikey): Uses inefficient read/write-with-timeout.
      */
-    private int index = 0;
 
     @Override
     public void run() {
@@ -144,13 +151,10 @@ public class SerialInputOutputManager implements Runnable {
             mState = State.RUNNING;
         }
 
-//        Log.i(TAG, "Running ...");
         Logger.i(TAG, "Running ...");
         try {
             while (true) {
-                index++;
                 if (getState() != State.RUNNING) {
-//                    Log.i(TAG, "Stopping mState=" + getState());
                     Logger.i(TAG, "Stopping mState=State.RUNNING");
                     break;
                 } else if (getState() == State.STOPPED) {
@@ -158,12 +162,9 @@ public class SerialInputOutputManager implements Runnable {
                 } else if (getState() == State.STOPPING) {
                     Logger.i(TAG, "Stopping mState=STOPPING");
                 }
-
-                Logger.w("index is :", index);
                 step();
             }
         } catch (Exception e) {
-//            Log.w(TAG, "Run ending due to exception: " + e.getMessage(), e);
             Logger.w(TAG, "Run ending due to exception: " + e.getMessage(), e);
             final Listener listener = getListener();
             if (listener != null) {
@@ -172,7 +173,6 @@ public class SerialInputOutputManager implements Runnable {
         } finally {
             synchronized (this) {
                 mState = State.STOPPED;
-//                Log.i(TAG, "Stopped");
                 Logger.i(TAG, "Stopped");
             }
         }
@@ -180,14 +180,19 @@ public class SerialInputOutputManager implements Runnable {
 
     private long lastTime = 0;
 
-    private void step() throws IOException {
+    private void step() {
 
         long currentTime = System.currentTimeMillis();
         Logger.w("interval time is :", currentTime - lastTime);
         lastTime = currentTime;
 
         // Handle incoming data.
-        int len = mSerialPort.read(mReadBuffer.array(), mReadTimeout);
+        int len = 0;
+        try {
+            len = mSerialPort.read(mReadBuffer.array(), mReadTimeout);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         if (len > 0) {
 //            if (DEBUG) Log.d(TAG, "Read data len=" + len);
             if (DEBUG) Logger.d(TAG, "Read data len=" + len);
@@ -198,8 +203,6 @@ public class SerialInputOutputManager implements Runnable {
                 listener.onNewData(data);
             }
             mReadBuffer.clear();
-        } else {
-            Logger.w("当前指令数据发送完成、。。。");
         }
 
         // Handle outgoing data.
@@ -215,11 +218,17 @@ public class SerialInputOutputManager implements Runnable {
         }
         if (outBuff != null) {
             if (DEBUG) {
-//                Log.d(TAG, "Writing data len=" + len);
-                Logger.d(TAG, "Writing data len=" + len);
+                Logger.d(TAG, "Writing data len = " + len);
             }
-            mSerialPort.write(outBuff, mWriteTimeout);
+            try {
+                mSerialPort.write(outBuff, mWriteTimeout);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 
+    public boolean isCompleted() {
+        return completeFlag;
+    }
 }

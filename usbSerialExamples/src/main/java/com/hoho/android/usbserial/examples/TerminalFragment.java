@@ -29,6 +29,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
+import com.hoho.android.usbserial.at.UsbPermission;
 import com.hoho.android.usbserial.driver.UsbSerialDriver;
 import com.hoho.android.usbserial.driver.UsbSerialPort;
 import com.hoho.android.usbserial.driver.UsbSerialProber;
@@ -36,25 +37,26 @@ import com.hoho.android.usbserial.util.HexDump;
 import com.hoho.android.usbserial.util.SerialInputOutputManager;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.concurrent.Executors;
 
 public class TerminalFragment extends Fragment implements SerialInputOutputManager.Listener {
 
-    private enum UsbPermission {Unknown, Requested, Granted, Denied}
+//    private enum UsbPermission {Unknown, Requested, Granted, Denied}
 
     private static final String INTENT_ACTION_GRANT_USB = BuildConfig.APPLICATION_ID + ".GRANT_USB";
     private static final int WRITE_WAIT_MILLIS = 2000;
     private static final int READ_WAIT_MILLIS = 2000;
 
-    private int deviceId, portNum, baudRate;
-    private boolean withIoManager;
 
     private BroadcastReceiver broadcastReceiver;
     private Handler mainLooper;
     private TextView receiveText;
     private ControlLines controlLines;
 
+    private int deviceId, portNum, baudRate;
+    private boolean withIoManager;
     private SerialInputOutputManager usbIoManager;
     private UsbSerialPort usbSerialPort;
     private UsbPermission usbPermission = UsbPermission.Unknown;
@@ -144,7 +146,8 @@ public class TerminalFragment extends Fragment implements SerialInputOutputManag
         View sendBtn = view.findViewById(R.id.send_btn);
         sendBtn.setOnClickListener(v -> {
             isNext = true;
-            send(sendText.getText().toString());
+            String sendContent = sendText.getText().toString();
+            send(sendText.getText().toString(), !sendContent.contains("AT"));
         });
         View receiveBtn = view.findViewById(R.id.receive_btn);
         controlLines = new ControlLines(view);
@@ -260,13 +263,18 @@ public class TerminalFragment extends Fragment implements SerialInputOutputManag
         usbSerialPort = null;
     }
 
-    private void send(String str) {
+    private void send(String str, boolean isHexString) {
         if (!connected) {
             Toast.makeText(getActivity(), "not connected", Toast.LENGTH_SHORT).show();
             return;
         }
         try {
-            byte[] data = (str).getBytes();
+            byte[] data;
+            if (isHexString) {
+                data = HexDump.hexStringToByteArray(str);
+            } else {
+                data = (str).getBytes();
+            }
             SpannableStringBuilder spn = new SpannableStringBuilder();
             spn.append("send " + data.length + " bytes\n");
             spn.append(HexDump.dumpHexString(data) + "\n");
@@ -295,12 +303,20 @@ public class TerminalFragment extends Fragment implements SerialInputOutputManag
         }
     }
 
+    private ByteBuffer byteBuffer;
+
     private void receive(byte[] data) {
-        if (isNext) {
+ /*       if (isNext) {
             oneDatas = null;
             oneDatas = new byte[8192];
             isNext = false;
+        }*/
+
+        boolean completed = usbIoManager.isCompleted();
+        if (completed) {
+
         }
+
         SpannableStringBuilder spn = new SpannableStringBuilder();
         spn.append("receive " + data.length + " bytes\n");
 

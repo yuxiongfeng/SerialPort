@@ -21,11 +21,15 @@
 
 package com.hoho.android.usbserial.driver;
 
+import android.annotation.TargetApi;
 import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbDeviceConnection;
 import android.hardware.usb.UsbEndpoint;
 import android.hardware.usb.UsbRequest;
+import android.os.Build;
 import android.util.Log;
+
+import com.wms.logger.Logger;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -147,6 +151,7 @@ public abstract class CommonUsbSerialPort implements UsbSerialPort {
 
     protected abstract void closeInt();
 
+    @TargetApi(Build.VERSION_CODES.O)
     @Override
     public int read(final byte[] dest, final int timeout) throws IOException {
         if(mConnection == null) {
@@ -167,9 +172,18 @@ public abstract class CommonUsbSerialPort implements UsbSerialPort {
 
         } else {
             final ByteBuffer buf = ByteBuffer.wrap(dest);
-            if (!mUsbRequest.queue(buf, dest.length)) {
-                throw new IOException("Queueing USB request failed");
+
+            try{
+//                if (!mUsbRequest.queue(buf, dest.length)) {
+                if (!mUsbRequest.queue(buf)) {
+                    throw new IOException("Queueing USB request failed");
+                }else {
+                    Logger.w("buf hasArray : ",buf.hasArray());
+                }
+            }catch (Exception e){
+                e.printStackTrace();
             }
+
             final UsbRequest response = mConnection.requestWait();
             if (response == null) {
                 throw new IOException("Waiting for USB request failed");
