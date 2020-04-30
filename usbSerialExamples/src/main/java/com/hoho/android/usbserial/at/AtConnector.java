@@ -1,31 +1,20 @@
 package com.hoho.android.usbserial.at;
 
 import android.app.Activity;
-import android.app.PendingIntent;
-import android.content.BroadcastReceiver;
 import android.content.Context;
-import android.content.Intent;
-import android.content.IntentFilter;
-import android.hardware.usb.UsbDevice;
-import android.hardware.usb.UsbDeviceConnection;
-import android.hardware.usb.UsbManager;
-import android.os.Handler;
-import android.os.Looper;
+import android.text.TextUtils;
 
 import com.hoho.android.usbserial.at.interfaces.ConnectStatusListener;
 import com.hoho.android.usbserial.at.interfaces.Connector;
 import com.hoho.android.usbserial.at.interfaces.DataListener;
+import com.hoho.android.usbserial.at.interfaces.OnScanListener;
 import com.hoho.android.usbserial.at.interfaces.PortConnectListener;
-import com.hoho.android.usbserial.driver.UsbSerialDriver;
-import com.hoho.android.usbserial.driver.UsbSerialPort;
-import com.hoho.android.usbserial.driver.UsbSerialProber;
-import com.hoho.android.usbserial.examples.BuildConfig;
-import com.hoho.android.usbserial.examples.CustomProber;
-import com.hoho.android.usbserial.examples.TerminalFragment;
-import com.hoho.android.usbserial.util.SerialInputOutputManager;
+import com.hoho.android.usbserial.at.util.AtOperator;
+import com.wms.logger.Logger;
 
-import java.io.IOException;
-import java.util.concurrent.Executors;
+import java.util.HashMap;
+import java.util.Map;
+
 
 /**
  * @Description:
@@ -34,118 +23,105 @@ import java.util.concurrent.Executors;
  * @UpdateUser: yxf
  * @UpdateDate: 2020/4/29 14:58
  */
-public class AtConnector implements Connector, SerialInputOutputManager.Listener {
-
-    private Activity activity;
-    private Context context;
-    private int deviceId, portNum, baudRate;
-
-    private ConnectStatusListener connectorListener;
+public class AtConnector implements Connector {
+    /**
+     * 管理atOperator的集合
+     */
+    private static Map<Integer, AtConnector> atConnectorMap = new HashMap<>();
     private PortConnectListener portConnectListener;
+    private ConnectStatusListener connectStatusListener;
     private DataListener dataListener;
-    private UsbSerialPort usbSerialPort;
-    private UsbPermission usbPermission = UsbPermission.Unknown;
-    private static final String INTENT_ACTION_GRANT_USB = BuildConfig.APPLICATION_ID + ".GRANT_USB";
-    private SerialInputOutputManager usbIoManager;
-    private boolean withIoManager;
-    private boolean portConnected;
 
-    private ControlLines controlLines;
+    private AtOperator atOperator;
 
-    private BroadcastReceiver broadcastReceiver;
-    private Handler mainLooper;
+    private String patchMac;
+    /**
+     * 扫描出来的type，用于连接设备的参数
+     */
+    private int patchType;
 
-    public AtConnector(Activity activity,Context context, int deviceId, int portNum, int baudRate, boolean withIoManager) {
-        this.activity = activity;
-        this.context = context;
-        this.deviceId = deviceId;
-        this.portNum = portNum;
-        this.baudRate = baudRate;
-        this.withIoManager = withIoManager;
-        mainLooper = new Handler(Looper.getMainLooper());
-        controlLines=new ControlLines();
+    public AtConnector(Activity activity, Context context, int deviceId, int portNum) {
+        atOperator = new AtOperator(activity, context, deviceId, portNum);
+//        atOperator.openSerialPort();//打开串口
+    }
 
-        broadcastReceiver = new BroadcastReceiver() {
-            @Override
-            public void onReceive(Context context, Intent intent) {
-                if (intent.getAction().equals(INTENT_ACTION_GRANT_USB)) {
-                    usbPermission = intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false)
-                            ? UsbPermission.Granted : UsbPermission.Denied;
-//                    connectSerialPort();
-                }
-            }
-        };
+    public void setPortConnectListener(PortConnectListener portConnectListener) {
+        this.portConnectListener = portConnectListener;
+        atOperator.setPortConnectListener(portConnectListener);//设置串口连接状态的回调
+    }
 
-        activity.registerReceiver(broadcastReceiver, new IntentFilter(INTENT_ACTION_GRANT_USB));
-        if (usbPermission == UsbPermission.Unknown || usbPermission == UsbPermission.Granted){}
-//            mainLooper.post(this::connectSerialPort);
+    /**
+     * 打开串口
+     */
+    public void openSerialPort(){
+        atOperator.openSerialPort();
+    }
+
+    /**
+     * 获取atConnector实例
+     *
+     * @param activity
+     * @param context
+     * @param deviceId
+     * @param portNum
+     * @return
+     */
+    public static AtConnector getInstance(Activity activity, Context context, int deviceId, int portNum) {
+        if (!atConnectorMap.containsKey(deviceId)) {
+            atConnectorMap.put(deviceId, new AtConnector(activity, context, deviceId, portNum));
+        }
+        return atConnectorMap.get(deviceId);
+    }
+
+    public void setPatchMac(String patchMac) {
+        this.patchMac = patchMac;
+    }
+
+    public void setPatchType(int patchType) {
+        this.patchType = patchType;
+    }
+
+    /**
+     * 扫描设备
+     */
+    public void scanDevices(OnScanListener scanListener) {
+        atOperator.scanDevice(scanListener);
     }
 
     @Override
     public void connect() {
-
+        connect(null, null);
     }
 
     @Override
-    public void connect(ConnectStatusListener connectorListener, DataListener dataListener) {
-
-    }
-
-    @Override
-    public void connect(ConnectStatusListener connectorListener, PortConnectListener portConnectListener, DataListener dataListener) {
-        this.connectorListener = connectorListener;
-        this.portConnectListener = portConnectListener;
+    public void connect(ConnectStatusListener connectStatusListener, DataListener dataListener) {
+        this.connectStatusListener = connectStatusListener;
         this.dataListener = dataListener;
+
+        atOperator.setConnectStatusListener(connectStatusListener);
+        atOperator.setDataListener(dataListener);
+        if (TextUtils.isEmpty(patchMac)) {
+            Logger.w("patchMac is null");
+            throw new NullPointerException("patchMac is null,please set first!!!");
+        }
+        atOperator.connectDevice(patchType, patchMac);
     }
 
     @Override
     public void disConnect() {
-
+        atOperator.disConnect();
+        atConnectorMap.remove(atConnectorMap);
     }
 
     @Override
     public boolean isConnected() {
-        return false;
+        return null == atOperator ? false : atOperator.isConnected();
     }
 
     @Override
     public void cancelConnect() {
-
+        atOperator.disConnect();
+        atConnectorMap.remove(atConnectorMap);
     }
-
-
-    @Override
-    public void onNewData(byte[] data) {
-
-    }
-
-    @Override
-    public void onRunError(Exception e) {
-
-    }
-
-
-    class ControlLines {
-        private static final int refreshInterval = 200; // msec
-        private Runnable runnable;
-
-        ControlLines() {
-            runnable = this::start; // w/o explicit Runnable, a new lambda would be created on each postDelayed, which would not be found again by removeCallbacks
-        }
-
-        private boolean refresh() {
-            return true;
-        }
-
-        void start() {
-            if (portConnected && refresh())
-                mainLooper.postDelayed(runnable, refreshInterval);
-        }
-
-        void stop() {
-            mainLooper.removeCallbacks(runnable);
-        }
-    }
-
 
 }

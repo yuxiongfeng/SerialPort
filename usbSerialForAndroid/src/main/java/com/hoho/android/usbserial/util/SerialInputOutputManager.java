@@ -47,14 +47,6 @@ public class SerialInputOutputManager implements Runnable {
     private final ByteBuffer mReadBuffer = ByteBuffer.allocate(BUFSIZ);
     private final ByteBuffer mWriteBuffer = ByteBuffer.allocate(BUFSIZ); // Synchronized by 'mWriteBuffer'
 
-    /**
-     * 标志位，如：发送一次指令后是否所有数据都返回
-     * 字段设计来由：由于接口没有给一次请求什么时候结束的回调，经过分析自己判断
-     * len = mSerialPort.read(mReadBuffer.array(), mReadTimeout);
-     * 如果请求完成上面代码执行后不会再往下执行
-     */
-    private boolean completeFlag = false;
-
     public enum State {
         STOPPED,
         RUNNING,
@@ -226,9 +218,5 @@ public class SerialInputOutputManager implements Runnable {
                 e.printStackTrace();
             }
         }
-    }
-
-    public boolean isCompleted() {
-        return completeFlag;
     }
 }

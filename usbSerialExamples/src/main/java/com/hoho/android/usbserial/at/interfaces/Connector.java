@@ -11,8 +11,6 @@ public interface Connector {
 
     void connect(ConnectStatusListener connectorListener, DataListener dataListener);
 
-    void connect(ConnectStatusListener connectorListener, PortConnectListener portConnectListener, DataListener dataListener);
-
     /**
      * 断开连接设备
      */

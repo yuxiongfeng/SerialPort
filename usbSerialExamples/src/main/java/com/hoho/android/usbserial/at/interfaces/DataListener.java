@@ -42,5 +42,8 @@ public class DataListener {
 
     }
 
+    public void receiveResult(String data) {
+    }
+
 
 }

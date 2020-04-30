@@ -29,6 +29,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
+import com.hoho.android.usbserial.at.AtConnector;
 import com.hoho.android.usbserial.at.UsbPermission;
 import com.hoho.android.usbserial.driver.UsbSerialDriver;
 import com.hoho.android.usbserial.driver.UsbSerialPort;
@@ -37,18 +38,21 @@ import com.hoho.android.usbserial.util.HexDump;
 import com.hoho.android.usbserial.util.SerialInputOutputManager;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.Executors;
 
 public class TerminalFragment extends Fragment implements SerialInputOutputManager.Listener {
+    /**
+     * 管理atOperator的集合
+     */
+    private static Map<String, AtConnector> atConnectorMap = new HashMap<>();
 
-//    private enum UsbPermission {Unknown, Requested, Granted, Denied}
 
     private static final String INTENT_ACTION_GRANT_USB = BuildConfig.APPLICATION_ID + ".GRANT_USB";
     private static final int WRITE_WAIT_MILLIS = 2000;
     private static final int READ_WAIT_MILLIS = 2000;
-
 
     private BroadcastReceiver broadcastReceiver;
     private Handler mainLooper;
@@ -72,6 +76,7 @@ public class TerminalFragment extends Fragment implements SerialInputOutputManag
     private boolean isNext = false;
 
     public TerminalFragment() {
+
         broadcastReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
@@ -303,26 +308,25 @@ public class TerminalFragment extends Fragment implements SerialInputOutputManag
         }
     }
 
-    private ByteBuffer byteBuffer;
+    private boolean is_o_letter = false;
 
     private void receive(byte[] data) {
- /*       if (isNext) {
-            oneDatas = null;
-            oneDatas = new byte[8192];
-            isNext = false;
-        }*/
-
-        boolean completed = usbIoManager.isCompleted();
-        if (completed) {
-
+        SpannableStringBuilder spn = new SpannableStringBuilder();
+//        spn.append("receive " + data.length + " bytes\n");
+        if (data.length > 0) {
+            String dumpHexString = HexDump.dumpHexString(data);
+            if (is_o_letter && dumpHexString.equalsIgnoreCase("k")) {
+                spn.append(new String(data) + "\n");
+            } else {
+                spn.append(new String(data));
+            }
+            if (dumpHexString.equalsIgnoreCase("o")) {
+                is_o_letter = true;
+            } else {
+                is_o_letter = false;
+            }
         }
 
-        SpannableStringBuilder spn = new SpannableStringBuilder();
-        spn.append("receive " + data.length + " bytes\n");
-
-
-        if (data.length > 0)
-            spn.append(HexDump.dumpHexString(data) + "\n");
         receiveText.append(spn);
     }
 
