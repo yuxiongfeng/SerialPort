@@ -3,8 +3,8 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
     android:background="@android:color/white"
+    android:orientation="vertical"
     tools:context=".TestActivity">
 
     <Button
@@ -14,22 +14,24 @@
         android:text="扫描" />
 
     <Button
-        android:id="@+id/id_connect"
+        android:id="@+id/id_disconnect"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="连接" />
+        android:text="断开连接" />
 
 
     <TextView
         android:id="@+id/id_show"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textSize="14sp"
-        android:textColor="#333333" />
+        android:textColor="#333333"
+        android:textSize="14sp" />
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/id_recyclerView"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"/>
+        android:layout_height="match_parent"
+        android:layout_marginLeft="15dp"
+        android:layout_marginRight="15dp" />
 
 </LinearLayout>

@@ -60,7 +60,7 @@ public class TestActivity extends AppCompatActivity implements View.OnClickListe
     };
 
     private Button idScan;
-    private Button idConnect;
+    private Button idDisconnect;
     private TextView txtShow;
     private MyHandler myHandler;
     private ScanAdapter scanAdapter;
@@ -147,9 +147,6 @@ public class TestActivity extends AppCompatActivity implements View.OnClickListe
     };
 
 
-    private boolean is_o_letter;
-
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -181,11 +178,11 @@ public class TestActivity extends AppCompatActivity implements View.OnClickListe
 
     private void initView() {
         idScan = findViewById(R.id.id_scan);
-        idConnect = findViewById(R.id.id_connect);
+        idDisconnect = findViewById(R.id.id_disconnect);
         txtShow = findViewById(R.id.id_show);
 
         idScan.setOnClickListener(this);
-        idConnect.setOnClickListener(this);
+        idDisconnect.setOnClickListener(this);
         idRecyclerView = findViewById(R.id.id_recyclerView);
     }
 
@@ -205,7 +202,8 @@ public class TestActivity extends AppCompatActivity implements View.OnClickListe
                             String[] macList = data.split("\r\n");
                             for (int i = 0; i < macList.length; i++) {
                                 if (macList[i].contains("BLE_TEMP")) {
-                                    deviceList.add(macList[i].substring(8, 20));
+                                    int index = macList[i].indexOf(":");
+                                    deviceList.add(macList[i].substring(index+1, index + 13));
                                 }
                             }
                             mHandler.post(new Runnable() {
@@ -217,6 +215,9 @@ public class TestActivity extends AppCompatActivity implements View.OnClickListe
                         }
                     }
                 });
+                break;
+            case R.id.id_disconnect:
+                atConnector.disConnect();
                 break;
         }
     }

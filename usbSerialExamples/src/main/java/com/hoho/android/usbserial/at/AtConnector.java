@@ -21,10 +21,6 @@ import com.wms.logger.Logger;
  */
 public class AtConnector implements Connector {
 
-//    private PortConnectListener portConnectListener;
-//    private ConnectStatusListener connectStatusListener;
-//    private DataListener dataListener;
-
     private AtOperator atOperator;
 
     private String patchMac;

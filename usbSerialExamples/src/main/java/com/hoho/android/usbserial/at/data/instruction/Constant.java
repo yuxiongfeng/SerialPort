@@ -68,5 +68,4 @@ public class Constant {
      */
     public static final String SEND_DATA_PREPARE_PREFIX = "AT+SET_WAY";
 
-
 }

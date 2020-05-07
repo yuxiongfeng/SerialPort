@@ -57,6 +57,7 @@ public class AtOperator implements SerialInputOutputManager.Listener {
     private static final String INTENT_ACTION_GRANT_USB = BuildConfig.APPLICATION_ID + ".GRANT_USB";
     private static final int WRITE_WAIT_MILLIS = 2000;
     private static final int READ_WAIT_MILLIS = 2000;
+    private static final int NOTIFY_MILLIS = 5000;
     private SerialInputOutputManager usbIoManager;
     private UsbSerialPort usbSerialPort;
     /**
@@ -87,6 +88,14 @@ public class AtOperator implements SerialInputOutputManager.Listener {
      * 是否与设备建立连接
      */
     private boolean isConnected = false;
+
+    /**
+     * 上次接收数据的时间
+     */
+    private long lastTime;
+
+    private boolean isFirstArrive = true;
+
 
     public AtOperator(Activity activity, Context context, int deviceId, int portNum, int baudRate, boolean withIoManager) {
         this.activity = activity;
@@ -211,6 +220,7 @@ public class AtOperator implements SerialInputOutputManager.Listener {
      * 订阅温度
      */
     private void subscribeNotification() {
+        isFirstArrive = true;
         currentInstruction = atInstruction.notifyCharacteristic(HmUUID.CHARACTOR_TEMP.getCharacteristicAlias());
         instructionType = InstructionType.NOTIFY;
         //清空StringBuilder
@@ -278,6 +288,7 @@ public class AtOperator implements SerialInputOutputManager.Listener {
                 if (newData.startsWith(ResultConstant.COON_START)) {
                     Logger.w(newData);
                     instructionType = InstructionType.NONE;
+                    subscribeNotification();
                 }
                 break;
             case READ://没有标识
@@ -290,12 +301,37 @@ public class AtOperator implements SerialInputOutputManager.Listener {
                 }, 100);
                 break;
             case NOTIFY://没有标识
-                mHandler.postDelayed(new Runnable() {
+
+                long currentTime = System.currentTimeMillis();
+
+                if (currentTime - lastTime > NOTIFY_MILLIS && !isFirstArrive) {
+                    if (newData.contains("OK+DATA-OK")) {
+                        String[] split = newData.split("\r\n");
+                        Logger.w("实时温度 : ", BleUtils.parseTempV1_5(split[1]));
+                    } else {
+                        Logger.w("实时温度 : ", BleUtils.parseTempV1_5(newData));
+                    }
+                    //清空StringBuilder
+                    sb.delete(0, sb.length());
+                }
+                lastTime = currentTime;
+                if (isFirstArrive) {
+                    isFirstArrive = false;
+                }
+
+        /*        mHandler.postDelayed(new Runnable() {
                     @Override
                     public void run() {
-                        dataListener.receiveCurrentTemp(BleUtils.parseTempV1_5(newData));
+//                        dataListener.receiveCurrentTemp(BleUtils.parseTempV1_5(newData));OK+DATA-OK\R\N
+                        if (newData.contains("OK+DATA-OK")) {
+                            String[] split = newData.split("\r\n");
+                            Logger.w("实时温度 : ", BleUtils.parseTempV1_5(split[1]));
+                        } else {
+                            Logger.w("实时温度 : ", BleUtils.parseTempV1_5(newData));
+                        }
+
                     }
-                }, 100);
+                }, 2000);*/
 
                 break;
             case SET_WAY:
