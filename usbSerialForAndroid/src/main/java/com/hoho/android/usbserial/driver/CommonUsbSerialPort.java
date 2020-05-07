@@ -55,7 +55,9 @@ public abstract class CommonUsbSerialPort implements UsbSerialPort {
     protected UsbRequest mUsbRequest;
 
     protected final Object mWriteBufferLock = new Object();
-    /** Internal write buffer.  Guarded by {@link #mWriteBufferLock}. */
+    /**
+     * Internal write buffer.  Guarded by {@link #mWriteBufferLock}.
+     */
     protected byte[] mWriteBuffer;
 
     public CommonUsbSerialPort(UsbDevice device, int portNumber) {
@@ -85,10 +87,11 @@ public abstract class CommonUsbSerialPort implements UsbSerialPort {
     public int getPortNumber() {
         return mPortNumber;
     }
-    
+
     /**
      * Returns the device serial number
-     *  @return serial number
+     *
+     * @return serial number
      */
     @Override
     public String getSerial() {
@@ -123,7 +126,7 @@ public abstract class CommonUsbSerialPort implements UsbSerialPort {
             }
             mUsbRequest = new UsbRequest();
             mUsbRequest.initialize(mConnection, mReadEndpoint);
-        } catch(Exception e) {
+        } catch (Exception e) {
             close();
             throw e;
         }
@@ -138,14 +141,17 @@ public abstract class CommonUsbSerialPort implements UsbSerialPort {
         }
         try {
             mUsbRequest.cancel();
-        } catch(Exception ignored) {}
+        } catch (Exception ignored) {
+        }
         mUsbRequest = null;
         try {
             closeInt();
-        } catch(Exception ignored) {}
+        } catch (Exception ignored) {
+        }
         try {
             mConnection.close();
-        } catch(Exception ignored) {}
+        } catch (Exception ignored) {
+        }
         mConnection = null;
     }
 
@@ -154,7 +160,7 @@ public abstract class CommonUsbSerialPort implements UsbSerialPort {
     @TargetApi(Build.VERSION_CODES.O)
     @Override
     public int read(final byte[] dest, final int timeout) throws IOException {
-        if(mConnection == null) {
+        if (mConnection == null) {
             throw new IOException("Connection closed");
         }
         final int nread;
@@ -173,20 +179,24 @@ public abstract class CommonUsbSerialPort implements UsbSerialPort {
         } else {
             final ByteBuffer buf = ByteBuffer.wrap(dest);
 
-            try{
+            try {
 //                if (!mUsbRequest.queue(buf, dest.length)) {
                 if (!mUsbRequest.queue(buf)) {
                     throw new IOException("Queueing USB request failed");
-                }else {
-                    Logger.w("buf hasArray : ",buf.hasArray());
+                } else {
+                    Logger.w("buf hasArray : ", buf.hasArray());
                 }
-            }catch (Exception e){
+            } catch (Exception e) {
                 e.printStackTrace();
             }
 
-            final UsbRequest response = mConnection.requestWait();
-            if (response == null) {
-                throw new IOException("Waiting for USB request failed");
+            try {
+                final UsbRequest response = mConnection.requestWait();
+                if (response == null) {
+                    throw new IOException("Waiting for USB request failed");
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
             }
             nread = buf.position();
         }
@@ -197,13 +207,15 @@ public abstract class CommonUsbSerialPort implements UsbSerialPort {
         }
     }
 
-    protected int readFilter(final byte[] buffer, int len) throws IOException { return len; }
+    protected int readFilter(final byte[] buffer, int len) throws IOException {
+        return len;
+    }
 
     @Override
     public int write(final byte[] src, final int timeout) throws IOException {
         int offset = 0;
 
-        if(mConnection == null) {
+        if (mConnection == null) {
             throw new IOException("Connection closed");
         }
         while (offset < src.length) {

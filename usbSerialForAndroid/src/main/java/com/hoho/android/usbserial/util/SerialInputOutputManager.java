@@ -182,7 +182,7 @@ public class SerialInputOutputManager implements Runnable {
         int len = 0;
         try {
             len = mSerialPort.read(mReadBuffer.array(), mReadTimeout);
-        } catch (Exception e) {
+        } catch (IOException e) {
             e.printStackTrace();
         }
         if (len > 0) {

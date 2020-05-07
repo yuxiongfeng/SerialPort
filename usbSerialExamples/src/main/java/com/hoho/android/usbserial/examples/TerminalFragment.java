@@ -36,6 +36,7 @@ import com.hoho.android.usbserial.driver.UsbSerialPort;
 import com.hoho.android.usbserial.driver.UsbSerialProber;
 import com.hoho.android.usbserial.util.HexDump;
 import com.hoho.android.usbserial.util.SerialInputOutputManager;
+import com.wms.logger.Logger;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -48,7 +49,6 @@ public class TerminalFragment extends Fragment implements SerialInputOutputManag
      * 管理atOperator的集合
      */
     private static Map<String, AtConnector> atConnectorMap = new HashMap<>();
-
 
     private static final String INTENT_ACTION_GRANT_USB = BuildConfig.APPLICATION_ID + ".GRANT_USB";
     private static final int WRITE_WAIT_MILLIS = 2000;
@@ -327,6 +327,7 @@ public class TerminalFragment extends Fragment implements SerialInputOutputManag
             }
         }
 
+        Logger.w(spn.toString());
         receiveText.append(spn);
     }
 

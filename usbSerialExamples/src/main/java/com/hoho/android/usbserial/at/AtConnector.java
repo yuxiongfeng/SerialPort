@@ -12,10 +12,6 @@ import com.hoho.android.usbserial.at.interfaces.PortConnectListener;
 import com.hoho.android.usbserial.at.util.AtOperator;
 import com.wms.logger.Logger;
 
-import java.util.HashMap;
-import java.util.Map;
-
-
 /**
  * @Description:
  * @Author: yxf
@@ -24,13 +20,10 @@ import java.util.Map;
  * @UpdateDate: 2020/4/29 14:58
  */
 public class AtConnector implements Connector {
-    /**
-     * 管理atOperator的集合
-     */
-    private static Map<Integer, AtConnector> atConnectorMap = new HashMap<>();
-    private PortConnectListener portConnectListener;
-    private ConnectStatusListener connectStatusListener;
-    private DataListener dataListener;
+
+//    private PortConnectListener portConnectListener;
+//    private ConnectStatusListener connectStatusListener;
+//    private DataListener dataListener;
 
     private AtOperator atOperator;
 
@@ -42,36 +35,20 @@ public class AtConnector implements Connector {
 
     public AtConnector(Activity activity, Context context, int deviceId, int portNum) {
         atOperator = new AtOperator(activity, context, deviceId, portNum);
-//        atOperator.openSerialPort();//打开串口
     }
 
     public void setPortConnectListener(PortConnectListener portConnectListener) {
-        this.portConnectListener = portConnectListener;
+//        this.portConnectListener = portConnectListener;
         atOperator.setPortConnectListener(portConnectListener);//设置串口连接状态的回调
     }
 
     /**
      * 打开串口
      */
-    public void openSerialPort(){
+    public void openSerialPort() {
         atOperator.openSerialPort();
     }
 
-    /**
-     * 获取atConnector实例
-     *
-     * @param activity
-     * @param context
-     * @param deviceId
-     * @param portNum
-     * @return
-     */
-    public static AtConnector getInstance(Activity activity, Context context, int deviceId, int portNum) {
-        if (!atConnectorMap.containsKey(deviceId)) {
-            atConnectorMap.put(deviceId, new AtConnector(activity, context, deviceId, portNum));
-        }
-        return atConnectorMap.get(deviceId);
-    }
 
     public void setPatchMac(String patchMac) {
         this.patchMac = patchMac;
@@ -95,8 +72,8 @@ public class AtConnector implements Connector {
 
     @Override
     public void connect(ConnectStatusListener connectStatusListener, DataListener dataListener) {
-        this.connectStatusListener = connectStatusListener;
-        this.dataListener = dataListener;
+//        this.connectStatusListener = connectStatusListener;
+//        this.dataListener = dataListener;
 
         atOperator.setConnectStatusListener(connectStatusListener);
         atOperator.setDataListener(dataListener);
@@ -110,7 +87,6 @@ public class AtConnector implements Connector {
     @Override
     public void disConnect() {
         atOperator.disConnect();
-        atConnectorMap.remove(atConnectorMap);
     }
 
     @Override
@@ -121,7 +97,6 @@ public class AtConnector implements Connector {
     @Override
     public void cancelConnect() {
         atOperator.disConnect();
-        atConnectorMap.remove(atConnectorMap);
     }
 
 }

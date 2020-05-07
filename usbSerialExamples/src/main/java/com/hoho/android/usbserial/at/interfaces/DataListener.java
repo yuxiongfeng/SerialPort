@@ -1,5 +1,9 @@
 package com.hoho.android.usbserial.at.interfaces;
 
+import com.hoho.android.usbserial.at.data.parse.TempDataBean;
+
+import java.util.List;
+
 /**
  * 只接收数据
  */
@@ -9,6 +13,10 @@ public class DataListener {
      * 接收当前温度
      */
     public void receiveCurrentTemp(float currentTemp) {
+    }
+
+
+    public void receiveCurrentTemp(List<TempDataBean> tempLists) {
     }
 
     /**

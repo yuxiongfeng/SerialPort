@@ -10,11 +10,6 @@ package com.hoho.android.usbserial.at.data.instruction;
 public class AtInstruction implements IDeviceInstruction {
 
     @Override
-    public String getBaseVerifyInstruction() {
-        return Constant.BASE_VERIFY;
-    }
-
-    @Override
     public String queryRole() {
         return Constant.QUERY_ROLE;
     }

@@ -8,10 +8,6 @@ package com.hoho.android.usbserial.at.data.instruction;
  * @UpdateDate: 2020/4/29 15:04
  */
 public class Constant {
-    /**
-     * 未连接的时候用于测试串口链路或者已连接用于断开
-     */
-    public static final String BASE_VERIFY = "AT";
 
     /**
      * 查询模式

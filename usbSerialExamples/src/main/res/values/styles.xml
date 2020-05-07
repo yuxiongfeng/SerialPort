@@ -4,4 +4,11 @@
         <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
         <item name="colorAccent">@color/colorAccent</item>
     </style>
+
+    <style name="MyBtnStyle" parent="@style/Base.Widget.AppCompat.Button.Borderless">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">40dp</item>
+        <item name="android:textColor">#fff</item>
+        <item name="android:textSize">14sp</item>
+    </style>
 </resources>

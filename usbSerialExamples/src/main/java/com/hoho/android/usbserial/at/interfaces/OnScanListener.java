@@ -15,7 +15,7 @@ public class OnScanListener {
     /**
      * 发现设备
      */
-    public void onDeviceFound(byte[] data){
+    public void onDeviceFound(String data) {
     }
 
     /**

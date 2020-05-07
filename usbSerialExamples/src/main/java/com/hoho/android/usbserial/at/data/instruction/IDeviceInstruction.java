@@ -8,10 +8,6 @@ package com.hoho.android.usbserial.at.data.instruction;
  * @UpdateDate: 2020/4/29 14:44
  */
 public interface IDeviceInstruction {
-    /**
-     * 未连接的时候用于测试串口链路或者已连接用于断开
-     */
-    String getBaseVerifyInstruction();
 
     /**
      * 查询当前是主机模式还是从机模式
