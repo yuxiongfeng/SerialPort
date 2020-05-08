@@ -13,6 +13,7 @@ import android.text.TextUtils;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -34,6 +35,7 @@ import java.util.List;
 public class TestActivity extends AppCompatActivity implements View.OnClickListener {
     public static final int MSG_OPEN_PORT = 0x01;
     public static final int MSG_SCAN = 0x02;
+    public static final int MSG_TEMP = 0x03;
 
     private List<String> deviceList = new ArrayList<>();
 
@@ -65,6 +67,8 @@ public class TestActivity extends AppCompatActivity implements View.OnClickListe
     private MyHandler myHandler;
     private ScanAdapter scanAdapter;
     private RecyclerView idRecyclerView;
+    private Handler mHandler = new Handler(Looper.getMainLooper());
+    private TextView idPortStatus;
 
     private static class MyHandler extends Handler {
 
@@ -80,14 +84,14 @@ public class TestActivity extends AppCompatActivity implements View.OnClickListe
             TestActivity activity = mActivity.get();
             switch (msg.what) {
                 case MSG_OPEN_PORT:
-                    activity.txtShow.append(msg.obj.toString());
+                    activity.idPortStatus.setText(msg.obj.toString());
+                    break;
+                case MSG_TEMP:
+                    activity.txtShow.setText(msg.obj.toString());
                     break;
             }
         }
     }
-
-
-    private Handler mHandler = new Handler(Looper.getMainLooper());
 
 
     private PortConnectListener portConnectListener = new PortConnectListener() {
@@ -121,6 +125,12 @@ public class TestActivity extends AppCompatActivity implements View.OnClickListe
         @Override
         public void onDisconnect(boolean isManual) {
             super.onDisconnect(isManual);
+            mHandler.post(new Runnable() {
+                @Override
+                public void run() {
+                    Toast.makeText(TestActivity.this, "连接断开", Toast.LENGTH_SHORT).show();
+                }
+            });
         }
 
         @Override
@@ -133,6 +143,11 @@ public class TestActivity extends AppCompatActivity implements View.OnClickListe
         @Override
         public void receiveCurrentTemp(List<TempDataBean> tempLists) {
             super.receiveCurrentTemp(tempLists);
+            float temp = tempLists.get(0).getTemp();
+            Message message = Message.obtain();
+            message.what = MSG_TEMP;
+            message.obj = temp;
+            myHandler.sendMessage(message);
         }
 
         @Override
@@ -164,13 +179,10 @@ public class TestActivity extends AppCompatActivity implements View.OnClickListe
         registerReceiver(broadcastReceiver, new IntentFilter(INTENT_ACTION_GRANT_USB));
 
         scanAdapter = new ScanAdapter(this, deviceList);
-        scanAdapter.setListener(new ScanAdapter.ItemClickListener() {
-            @Override
-            public void itemClickListener(String mac) {
-                atConnector.setPatchMac(mac);
-                atConnector.setPatchType(0);
-                atConnector.connect(connectStatusListener, dataListener);
-            }
+        scanAdapter.setListener(mac -> {
+            atConnector.setPatchMac(mac);
+            atConnector.setPatchType(0);
+            atConnector.connect(connectStatusListener, dataListener);
         });
         idRecyclerView.setAdapter(scanAdapter);
         idRecyclerView.setLayoutManager(new LinearLayoutManager(this));
@@ -184,13 +196,15 @@ public class TestActivity extends AppCompatActivity implements View.OnClickListe
         idScan.setOnClickListener(this);
         idDisconnect.setOnClickListener(this);
         idRecyclerView = findViewById(R.id.id_recyclerView);
+        idPortStatus = findViewById(R.id.id_port_status);
+        idPortStatus.setOnClickListener(this);
     }
 
     @Override
     public void onClick(View v) {
         switch (v.getId()) {
             case R.id.id_scan:
-                txtShow.append("\n开始扫描...\n");
+                txtShow.setText("\n开始扫描...\n");
                 if (deviceList != null) {
                     deviceList.clear();
                 }
@@ -203,15 +217,17 @@ public class TestActivity extends AppCompatActivity implements View.OnClickListe
                             for (int i = 0; i < macList.length; i++) {
                                 if (macList[i].contains("BLE_TEMP")) {
                                     int index = macList[i].indexOf(":");
-                                    deviceList.add(macList[i].substring(index+1, index + 13));
+                                    deviceList.add(macList[i].substring(index + 1, index + 13));
                                 }
                             }
-                            mHandler.post(new Runnable() {
-                                @Override
-                                public void run() {
-                                    scanAdapter.notifyDataSetChanged();
+                            mHandler.post(() -> {
+                                if (deviceList == null || deviceList.size() == 0) {
+                                    Toast.makeText(TestActivity.this, "未搜到设备", Toast.LENGTH_SHORT).show();
                                 }
+                                scanAdapter.notifyDataSetChanged();
+                                txtShow.setText("\n扫描结束\n");
                             });
+
                         }
                     }
                 });

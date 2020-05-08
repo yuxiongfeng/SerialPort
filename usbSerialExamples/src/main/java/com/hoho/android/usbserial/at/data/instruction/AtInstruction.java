@@ -61,7 +61,7 @@ public class AtInstruction implements IDeviceInstruction {
 
     @Override
     public String readCharacteristic(String characteristicSerial) {
-        return Constant.READ_CHARACTERISTIC_PREFIX + characteristicSerial;
+        return Constant.READ_CHARACTERISTIC_PREFIX + characteristicSerial+"?";
     }
 
     @Override

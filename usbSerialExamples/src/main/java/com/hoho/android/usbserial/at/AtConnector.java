@@ -2,6 +2,8 @@ package com.hoho.android.usbserial.at;
 
 import android.app.Activity;
 import android.content.Context;
+import android.os.Handler;
+import android.os.Looper;
 import android.text.TextUtils;
 
 import com.hoho.android.usbserial.at.interfaces.ConnectStatusListener;
@@ -28,6 +30,7 @@ public class AtConnector implements Connector {
      * 扫描出来的type，用于连接设备的参数
      */
     private int patchType;
+    private Handler mHandler=new Handler(Looper.getMainLooper());
 
     public AtConnector(Activity activity, Context context, int deviceId, int portNum) {
         atOperator = new AtOperator(activity, context, deviceId, portNum);
@@ -58,7 +61,14 @@ public class AtConnector implements Connector {
      * 扫描设备
      */
     public void scanDevices(OnScanListener scanListener) {
-        atOperator.scanDevice(scanListener);
+//        disConnect();
+        mHandler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                atOperator.scanDevice(scanListener);
+            }
+        },200);
+
     }
 
     @Override
@@ -68,7 +78,7 @@ public class AtConnector implements Connector {
 
     @Override
     public void connect(ConnectStatusListener connectStatusListener, DataListener dataListener) {
-//        this.connectStatusListener = connectStatusListener;
+//        this.connectStatusListener = connectStatusListener;4
 //        this.dataListener = dataListener;
 
         atOperator.setConnectStatusListener(connectStatusListener);

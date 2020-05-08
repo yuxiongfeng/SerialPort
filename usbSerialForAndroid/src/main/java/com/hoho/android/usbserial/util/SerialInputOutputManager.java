@@ -21,9 +21,9 @@
 
 package com.hoho.android.usbserial.util;
 
-import com.hoho.android.usbserial.driver.UsbSerialPort;
-import com.wms.logger.Logger;
+import android.util.Log;
 
+import com.hoho.android.usbserial.driver.UsbSerialPort;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
@@ -117,8 +117,7 @@ public class SerialInputOutputManager implements Runnable {
 
     public synchronized void stop() {
         if (getState() == State.RUNNING) {
-//            Log.i(TAG, "Stop requested");
-            Logger.i(TAG, "Stop requested");
+            Log.i(TAG, "Stop requested");
             mState = State.STOPPING;
         }
     }
@@ -143,21 +142,14 @@ public class SerialInputOutputManager implements Runnable {
             mState = State.RUNNING;
         }
 
-        Logger.i(TAG, "Running ...");
         try {
             while (true) {
                 if (getState() != State.RUNNING) {
-                    Logger.i(TAG, "Stopping mState=State.RUNNING");
                     break;
-                } else if (getState() == State.STOPPED) {
-                    Logger.i(TAG, "Stopping mState=STOPPED");
-                } else if (getState() == State.STOPPING) {
-                    Logger.i(TAG, "Stopping mState=STOPPING");
                 }
                 step();
             }
         } catch (Exception e) {
-            Logger.w(TAG, "Run ending due to exception: " + e.getMessage(), e);
             final Listener listener = getListener();
             if (listener != null) {
                 listener.onRunError(e);
@@ -165,19 +157,12 @@ public class SerialInputOutputManager implements Runnable {
         } finally {
             synchronized (this) {
                 mState = State.STOPPED;
-                Logger.i(TAG, "Stopped");
             }
         }
     }
 
-    private long lastTime = 0;
 
     private void step() {
-
-        long currentTime = System.currentTimeMillis();
-        Logger.w("interval time is :", currentTime - lastTime);
-        lastTime = currentTime;
-
         // Handle incoming data.
         int len = 0;
         try {
@@ -186,8 +171,7 @@ public class SerialInputOutputManager implements Runnable {
             e.printStackTrace();
         }
         if (len > 0) {
-//            if (DEBUG) Log.d(TAG, "Read data len=" + len);
-            if (DEBUG) Logger.d(TAG, "Read data len=" + len);
+            if (DEBUG) Log.d(TAG, "Read data len=" + len);
             final Listener listener = getListener();
             if (listener != null) {
                 final byte[] data = new byte[len];
@@ -210,7 +194,7 @@ public class SerialInputOutputManager implements Runnable {
         }
         if (outBuff != null) {
             if (DEBUG) {
-                Logger.d(TAG, "Writing data len = " + len);
+                Log.d(TAG,"Writing data len = " + len);
             }
             try {
                 mSerialPort.write(outBuff, mWriteTimeout);
