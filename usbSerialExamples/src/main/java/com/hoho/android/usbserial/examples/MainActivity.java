@@ -1,6 +1,5 @@
 package com.hoho.android.usbserial.examples;
 
-import android.content.Intent;
 import android.os.Bundle;
 
 import androidx.fragment.app.FragmentManager;
@@ -34,6 +33,7 @@ public class MainActivity extends AppCompatActivity implements FragmentManager.O
         return true;
     }
 
+/*
     @Override
     protected void onNewIntent(Intent intent) {
         if (intent.getAction().equals("android.hardware.usb.action.USB_DEVICE_ATTACHED")) {
@@ -43,5 +43,6 @@ public class MainActivity extends AppCompatActivity implements FragmentManager.O
         }
         super.onNewIntent(intent);
     }
+*/
 
 }

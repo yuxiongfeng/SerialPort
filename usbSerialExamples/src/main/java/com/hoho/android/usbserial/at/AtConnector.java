@@ -30,7 +30,7 @@ public class AtConnector implements Connector {
      * 扫描出来的type，用于连接设备的参数
      */
     private int patchType;
-    private Handler mHandler=new Handler(Looper.getMainLooper());
+    private Handler mHandler = new Handler(Looper.getMainLooper());
 
     public AtConnector(Activity activity, Context context, int deviceId, int portNum) {
         atOperator = new AtOperator(activity, context, deviceId, portNum);
@@ -61,14 +61,7 @@ public class AtConnector implements Connector {
      * 扫描设备
      */
     public void scanDevices(OnScanListener scanListener) {
-//        disConnect();
-        mHandler.postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                atOperator.scanDevice(scanListener);
-            }
-        },200);
-
+        atOperator.scanDevice(scanListener);
     }
 
     @Override
@@ -78,7 +71,7 @@ public class AtConnector implements Connector {
 
     @Override
     public void connect(ConnectStatusListener connectStatusListener, DataListener dataListener) {
-//        this.connectStatusListener = connectStatusListener;4
+//        this.connectStatusListener = connectStatusListener;
 //        this.dataListener = dataListener;
 
         atOperator.setConnectStatusListener(connectStatusListener);
@@ -98,6 +91,24 @@ public class AtConnector implements Connector {
     @Override
     public boolean isConnected() {
         return null == atOperator ? false : atOperator.isConnected();
+    }
+
+    /**
+     * 串口是否可用
+     *
+     * @return
+     */
+    public boolean isPortConnected() {
+        return null == atOperator ? false : atOperator.isPortConnected();
+    }
+
+    /**
+     * 关闭串口
+     */
+    public void closePort() {
+        if (atOperator != null) {
+            atOperator.closeSerialPort();
+        }
     }
 
     @Override

@@ -10,6 +10,8 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.hoho.android.usbserial.bean.DeviceBean;
+
 import java.util.List;
 
 /**
@@ -22,9 +24,9 @@ import java.util.List;
 public class ScanAdapter extends RecyclerView.Adapter<ScanAdapter.VH> {
 
     private Context context;
-    private List<String> deviceList;
+    private List<DeviceBean> deviceList;
 
-    public ScanAdapter(Context context, List<String> deviceList) {
+    public ScanAdapter(Context context, List<DeviceBean> deviceList) {
         this.context = context;
         this.deviceList = deviceList;
     }
@@ -37,10 +39,11 @@ public class ScanAdapter extends RecyclerView.Adapter<ScanAdapter.VH> {
 
     @Override
     public void onBindViewHolder(@NonNull VH holder, int position) {
-        holder.txtMac.setText(deviceList.get(position));
+        holder.txtMac.setText(deviceList.get(position).getMacaddress()+"\n"+deviceList.get(position).getBluetoothRssi());
+
         holder.btnConnect.setOnClickListener(v -> {
             if (listener != null) {
-                listener.itemClickListener(deviceList.get(position));
+                listener.itemClickListener(deviceList.get(position).getMacaddress());
             }
         });
     }

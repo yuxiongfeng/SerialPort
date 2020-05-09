@@ -162,8 +162,6 @@ public class DevicesFragment extends ListFragment {
             Intent intent = new Intent(getContext(), TestActivity.class);
             intent.putExtra("device", item.device.getDeviceId());
             intent.putExtra("port", item.port);
-            intent.putExtra("baud", baudRate);
-            intent.putExtra("withIoManager", withIoManager);
             startActivity(intent);
         }
     }

@@ -17,6 +17,7 @@ import com.hoho.android.usbserial.at.data.instruction.HmUUID;
 import com.hoho.android.usbserial.at.data.instruction.IDeviceInstruction;
 import com.hoho.android.usbserial.at.data.instruction.InstructionType;
 import com.hoho.android.usbserial.at.data.instruction.ResultConstant;
+import com.hoho.android.usbserial.at.data.parse.TempDataBean;
 import com.hoho.android.usbserial.at.interfaces.ConnectStatusListener;
 import com.hoho.android.usbserial.at.interfaces.DataListener;
 import com.hoho.android.usbserial.at.interfaces.OnScanListener;
@@ -24,14 +25,17 @@ import com.hoho.android.usbserial.at.interfaces.PortConnectListener;
 import com.hoho.android.usbserial.driver.UsbSerialDriver;
 import com.hoho.android.usbserial.driver.UsbSerialPort;
 import com.hoho.android.usbserial.driver.UsbSerialProber;
-import com.hoho.android.usbserial.examples.BuildConfig;
 import com.hoho.android.usbserial.examples.CustomProber;
 import com.hoho.android.usbserial.util.HexDump;
 import com.hoho.android.usbserial.util.SerialInputOutputManager;
 import com.wms.logger.Logger;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.List;
 import java.util.concurrent.Executors;
+
+import static com.hoho.android.usbserial.examples.TestActivity.INTENT_ACTION_GRANT_USB;
 
 /**
  * @Description: 指令工具类（发送数据后，所有的回调都在onNewData里面）
@@ -50,7 +54,6 @@ public class AtOperator implements SerialInputOutputManager.Listener {
     private int deviceId, portNum, baudRate;
     private boolean withIoManager;
 
-    private static final String INTENT_ACTION_GRANT_USB = BuildConfig.APPLICATION_ID + ".GRANT_USB";
     private static final int WRITE_WAIT_MILLIS = 2000;
     private static final int READ_WAIT_MILLIS = 2000;
     private static final int NOTIFY_MILLIS = 5000;
@@ -94,6 +97,8 @@ public class AtOperator implements SerialInputOutputManager.Listener {
      * 订阅温度，首次返回的数据（OK+DATA-OK）
      */
     private boolean isFirstArrive = true;
+
+    private ByteBuffer byteBuffer = ByteBuffer.allocate(getTempDataLength());
 
     public AtOperator(Activity activity, Context context, int deviceId, int portNum, int baudRate, boolean withIoManager) {
         this.activity = activity;
@@ -145,7 +150,7 @@ public class AtOperator implements SerialInputOutputManager.Listener {
     private void setRoleMaster() {
         currentInstruction = atInstruction.setRoleMaster();
         currentInstructionType = InstructionType.ROLE;
-        send(currentInstructionType, currentInstruction);
+        send(currentInstruction);
     }
 
     /**
@@ -154,9 +159,8 @@ public class AtOperator implements SerialInputOutputManager.Listener {
     private void isRoleMaster() {
         currentInstruction = atInstruction.queryRole();
         currentInstructionType = InstructionType.ROLE;
-        send(currentInstructionType, currentInstruction);
+        send(currentInstruction);
     }
-
 
     /**
      * 设置成手动模式，默认是自动连接模式，但是自动连接会产生找不到从机的问题
@@ -164,13 +168,13 @@ public class AtOperator implements SerialInputOutputManager.Listener {
     private void setImmeManual() {
         currentInstruction = atInstruction.setImmeManual();
         currentInstructionType = InstructionType.IMME;
-        send(currentInstructionType, currentInstruction);
+        send(currentInstruction);
     }
 
     private void isImmeManual() {
         currentInstruction = atInstruction.queryImme();
         currentInstructionType = InstructionType.IMME;
-        send(currentInstructionType, currentInstruction);
+        send(currentInstruction);
     }
 
     /**
@@ -180,12 +184,15 @@ public class AtOperator implements SerialInputOutputManager.Listener {
      */
     public void scanDevice(OnScanListener scanListener) {
         Logger.w("开始扫描。。。");
+        if (!checkPortOpen()) {
+            return;
+        }
         setScanListener(scanListener);
         currentInstruction = atInstruction.scanDevices();
         currentInstructionType = InstructionType.DISC;
         //开启扫描
         this.scanListener = scanListener;
-        send(currentInstructionType, currentInstruction);
+        send(currentInstruction);
     }
 
     /**
@@ -195,40 +202,52 @@ public class AtOperator implements SerialInputOutputManager.Listener {
      * @param patchMac
      */
     public void connectDevice(int type, String patchMac) {
+        if (!checkPortOpen()) {
+            return;
+        }
         connectStatus = 1;
         currentInstruction = atInstruction.connectDevice(type, patchMac);
         currentInstructionType = InstructionType.COON;
-        send(currentInstructionType, currentInstruction);
+        send(currentInstruction);
     }
 
     /**
      * 获取序列号
      */
     private void fetchSerialNum() {
+        if (!checkPortOpen()) {
+            return;
+        }
         lastTime = System.currentTimeMillis();
         currentInstruction = atInstruction.readCharacteristic(HmUUID.CHARACTOR_SERIAL_NUM.getCharacteristicAlias());
         currentInstructionType = InstructionType.READ;
-        send(currentInstructionType, currentInstruction);
+        send(currentInstruction);
     }
 
     /**
      * 获取版本号
      */
     private void fetchVersion() {
+        if (!checkPortOpen()) {
+            return;
+        }
         lastTime = System.currentTimeMillis();
         currentInstruction = atInstruction.readCharacteristic(HmUUID.CHARACTOR_VERSION.getCharacteristicAlias());
         currentInstructionType = InstructionType.READ;
-        send(currentInstructionType, currentInstruction);
+        send(currentInstruction);
     }
 
     /**
      * 订阅温度
      */
     private void subscribeTemp() {
+        if (!checkPortOpen()) {
+            return;
+        }
         isFirstArrive = true;
         currentInstruction = atInstruction.notifyCharacteristic(HmUUID.CHARACTOR_TEMP.getCharacteristicAlias());
         currentInstructionType = InstructionType.NOTIFY;
-        send(currentInstructionType, currentInstruction);
+        send(currentInstruction);
     }
 
     /**
@@ -240,7 +259,9 @@ public class AtOperator implements SerialInputOutputManager.Listener {
             currentInstructionType = InstructionType.AT;
             //清空StringBuilder
             sb.delete(0, sb.length());
-            send(currentInstructionType, currentInstruction);
+            send(currentInstruction);
+
+            mHandler.postDelayed(() -> closeSerialPort(), 200);
         }
     }
 
@@ -251,12 +272,11 @@ public class AtOperator implements SerialInputOutputManager.Listener {
      */
     @Override
     public void onNewData(byte[] data) {
-        long currentTime = System.currentTimeMillis();
         sb.append(new String(data));
         if (sb == null || sb.toString() == null || TextUtils.isEmpty(sb.toString())) {
             return;
         }
-        String newData = sb.toString();
+        String newData = sb.toString().replaceAll("\r\n", "");
 
         if (currentInstructionType != InstructionType.COON) {
 
@@ -327,7 +347,7 @@ public class AtOperator implements SerialInputOutputManager.Listener {
                     Logger.w("连接失败");
                     connectStatus = 3;
                 }
-                if (newData.startsWith(ResultConstant.COON_START)) {
+                if (newData.startsWith(ResultConstant.COON_START) && newData.endsWith(ResultConstant.COON_END)) {
                     Logger.w("coon is :", newData);
                     currentInstructionType = InstructionType.NONE;
                     mHandler.postDelayed(() -> {
@@ -357,6 +377,7 @@ public class AtOperator implements SerialInputOutputManager.Listener {
 
                 break;
             case NOTIFY://没有标识
+                byteBuffer.put(data);
                 if (isFirstArrive && newData.startsWith(ResultConstant.NOTIFY_SUCCESS)) {
                     if (!isConnected()) {
                         connectStatus = 2;
@@ -365,15 +386,22 @@ public class AtOperator implements SerialInputOutputManager.Listener {
                     Logger.w("订阅温度成功");
                     //清空StringBuilder
                     sb.delete(0, sb.length());
-                } else if (newData.length() == getTempDataLength()) {//一次完整的温度数据
-                    Logger.w("实时温度 : ", BleUtils.parseTempV1_5(newData));
-                    dataListener.receiveCurrentTemp(BleUtils.parseTempV1_5(newData));
+                    byteBuffer.clear();
+                    if (isFirstArrive) {
+                        isFirstArrive = false;
+                    }
+                } else if (byteBuffer.position() == byteBuffer.capacity()) {
+                    dataListener.receiveCurrentTemp(BleUtils.parseTempV1_5(byteBuffer.array()));
+                    Logger.w("实时温度 : ", new String(byteBuffer.array()));
+                    byteBuffer.clear();
+                }
+
+    /*            else if (newData.length() == getTempDataLength()) {
+                    Logger.w("实时温度 : ", newData);
+//                    dataListener.receiveCurrentTemp(BleUtils.parseTempV1_5(newData));
                     //清空StringBuilder
                     sb.delete(0, sb.length());
-                }
-                if (isFirstArrive) {
-                    isFirstArrive = false;
-                }
+                }*/
                 break;
             case SET_WAY:
                 if (newData.startsWith(ResultConstant.SET_WAY)) {
@@ -440,6 +468,24 @@ public class AtOperator implements SerialInputOutputManager.Listener {
         return connectStatus == 2;
     }
 
+    public boolean isPortConnected() {
+        return portConnected;
+    }
+
+    /**
+     * 检查串口是否打开
+     *
+     * @return
+     */
+    public boolean checkPortOpen() {
+        if (!isPortConnected()) {
+            mHandler.post(() -> openSerialPort());
+            return false;
+        } else {
+            return true;
+        }
+    }
+
     /**
      * 连接串口
      */
@@ -492,7 +538,6 @@ public class AtOperator implements SerialInputOutputManager.Listener {
                 }
                 portConnected = true;
                 portConnectListener.onConnectSuccess();
-//                setRoleMaster();
                 Logger.w("串口打开成功。。。");
             } catch (Exception e) {
                 portConnectListener.onConnectFaild("connection failed: " + e.getMessage());
@@ -504,7 +549,10 @@ public class AtOperator implements SerialInputOutputManager.Listener {
     /**
      * 关闭串口
      */
-    private void closeSerialPort() {
+    public void closeSerialPort() {
+        if (isPortConnected() || usbSerialPort == null) {
+            return;
+        }
         portConnected = false;
         if (usbIoManager != null)
             usbIoManager.stop();
@@ -517,7 +565,7 @@ public class AtOperator implements SerialInputOutputManager.Listener {
         Logger.w("关闭串口");
     }
 
-    private void send(InstructionType instructionType, String str) {
+    private void send(String str) {
         //清空StringBuilder
         sb.delete(0, sb.length());
         send(str, false);
