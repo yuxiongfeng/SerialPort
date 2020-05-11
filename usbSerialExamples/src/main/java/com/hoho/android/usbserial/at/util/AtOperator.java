@@ -17,7 +17,6 @@ import com.hoho.android.usbserial.at.data.instruction.HmUUID;
 import com.hoho.android.usbserial.at.data.instruction.IDeviceInstruction;
 import com.hoho.android.usbserial.at.data.instruction.InstructionType;
 import com.hoho.android.usbserial.at.data.instruction.ResultConstant;
-import com.hoho.android.usbserial.at.data.parse.TempDataBean;
 import com.hoho.android.usbserial.at.interfaces.ConnectStatusListener;
 import com.hoho.android.usbserial.at.interfaces.DataListener;
 import com.hoho.android.usbserial.at.interfaces.OnScanListener;
@@ -32,7 +31,6 @@ import com.wms.logger.Logger;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.List;
 import java.util.concurrent.Executors;
 
 import static com.hoho.android.usbserial.examples.TestActivity.INTENT_ACTION_GRANT_USB;
@@ -56,7 +54,10 @@ public class AtOperator implements SerialInputOutputManager.Listener {
 
     private static final int WRITE_WAIT_MILLIS = 2000;
     private static final int READ_WAIT_MILLIS = 2000;
-    private static final int NOTIFY_MILLIS = 5000;
+    /**
+     * 订阅数据时间间隔
+     */
+    private static final int NOTIFY_INTERVAL = 8000;
     private SerialInputOutputManager usbIoManager;
     private UsbSerialPort usbSerialPort;
     /**
@@ -91,7 +92,7 @@ public class AtOperator implements SerialInputOutputManager.Listener {
     /**
      * 上次接收数据的时间
      */
-    private long lastTime;
+    private long lastNotifyTime;
 
     /**
      * 订阅温度，首次返回的数据（OK+DATA-OK）
@@ -218,7 +219,6 @@ public class AtOperator implements SerialInputOutputManager.Listener {
         if (!checkPortOpen()) {
             return;
         }
-        lastTime = System.currentTimeMillis();
         currentInstruction = atInstruction.readCharacteristic(HmUUID.CHARACTOR_SERIAL_NUM.getCharacteristicAlias());
         currentInstructionType = InstructionType.READ;
         send(currentInstruction);
@@ -231,7 +231,6 @@ public class AtOperator implements SerialInputOutputManager.Listener {
         if (!checkPortOpen()) {
             return;
         }
-        lastTime = System.currentTimeMillis();
         currentInstruction = atInstruction.readCharacteristic(HmUUID.CHARACTOR_VERSION.getCharacteristicAlias());
         currentInstructionType = InstructionType.READ;
         send(currentInstruction);
@@ -241,6 +240,7 @@ public class AtOperator implements SerialInputOutputManager.Listener {
      * 订阅温度
      */
     private void subscribeTemp() {
+        lastNotifyTime = System.currentTimeMillis();
         if (!checkPortOpen()) {
             return;
         }
@@ -377,8 +377,23 @@ public class AtOperator implements SerialInputOutputManager.Listener {
 
                 break;
             case NOTIFY://没有标识
-                byteBuffer.put(data);
-                if (isFirstArrive && newData.startsWith(ResultConstant.NOTIFY_SUCCESS)) {
+                long currentNotifyTime = System.currentTimeMillis();
+                if (currentNotifyTime - lastNotifyTime <= NOTIFY_INTERVAL) {//同一段数据\
+                    byteBuffer.put(data);
+                } else {//不同段数据
+
+                    byteBuffer.clear();
+                }
+                int bufferPosition = byteBuffer.position();
+                if (bufferPosition + data.length <= byteBuffer.capacity()) {
+                    byteBuffer.put(data);
+                } else {
+                    dataListener.receiveCurrentTemp(BleUtils.parseTempV1_5(byteBuffer.array()));
+
+                }
+
+         /*       if (isFirstArrive && newData.startsWith(ResultConstant.NOTIFY_SUCCESS)) {
+
                     if (!isConnected()) {
                         connectStatus = 2;
                         connectStatusListener.onConnectSuccess();
@@ -391,16 +406,13 @@ public class AtOperator implements SerialInputOutputManager.Listener {
                         isFirstArrive = false;
                     }
                 } else if (byteBuffer.position() == byteBuffer.capacity()) {
-                    dataListener.receiveCurrentTemp(BleUtils.parseTempV1_5(byteBuffer.array()));
+                    try {
+                        dataListener.receiveCurrentTemp(BleUtils.parseTempV1_5(byteBuffer.array()));
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
                     Logger.w("实时温度 : ", new String(byteBuffer.array()));
                     byteBuffer.clear();
-                }
-
-    /*            else if (newData.length() == getTempDataLength()) {
-                    Logger.w("实时温度 : ", newData);
-//                    dataListener.receiveCurrentTemp(BleUtils.parseTempV1_5(newData));
-                    //清空StringBuilder
-                    sb.delete(0, sb.length());
                 }*/
                 break;
             case SET_WAY:
@@ -411,7 +423,7 @@ public class AtOperator implements SerialInputOutputManager.Listener {
                 break;
             case NONE:
                 if (newData.startsWith(ResultConstant.AT_LOST)) {//断线或连接失败
-
+                    Logger.w("设备断开。。。");
                 }
                 break;
         }
