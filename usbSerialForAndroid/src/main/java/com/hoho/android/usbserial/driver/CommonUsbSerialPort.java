@@ -183,8 +183,6 @@ public abstract class CommonUsbSerialPort implements UsbSerialPort {
 //                if (!mUsbRequest.queue(buf, dest.length)) {
                 if (!mUsbRequest.queue(buf)) {
                     throw new IOException("Queueing USB request failed");
-                } else {
-                    Logger.w("buf hasArray : ", buf.hasArray());
                 }
             } catch (Exception e) {
                 e.printStackTrace();

@@ -29,8 +29,7 @@ public class AtConnector implements Connector {
     /**
      * 扫描出来的type，用于连接设备的参数
      */
-    private int patchType;
-    private Handler mHandler = new Handler(Looper.getMainLooper());
+    private int patchType = 0;
 
     public AtConnector(Activity activity, Context context, int deviceId, int portNum) {
         atOperator = new AtOperator(activity, context, deviceId, portNum);
@@ -53,10 +52,6 @@ public class AtConnector implements Connector {
         this.patchMac = patchMac;
     }
 
-    public void setPatchType(int patchType) {
-        this.patchType = patchType;
-    }
-
     /**
      * 扫描设备
      */
@@ -71,8 +66,6 @@ public class AtConnector implements Connector {
 
     @Override
     public void connect(ConnectStatusListener connectStatusListener, DataListener dataListener) {
-//        this.connectStatusListener = connectStatusListener;
-//        this.dataListener = dataListener;
 
         atOperator.setConnectStatusListener(connectStatusListener);
         atOperator.setDataListener(dataListener);

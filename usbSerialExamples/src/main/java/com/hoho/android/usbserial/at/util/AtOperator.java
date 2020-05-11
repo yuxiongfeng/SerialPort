@@ -90,16 +90,15 @@ public class AtOperator implements SerialInputOutputManager.Listener {
     private int connectStatus = 0;
 
     /**
-     * 上次接收数据的时间
-     */
-    private long lastNotifyTime;
-
-    /**
      * 订阅温度，首次返回的数据（OK+DATA-OK）
      */
     private boolean isFirstArrive = true;
 
-    private ByteBuffer byteBuffer = ByteBuffer.allocate(getTempDataLength());
+    /**
+     * 当前连接的体温贴mac
+     */
+    private String mac;
+
 
     public AtOperator(Activity activity, Context context, int deviceId, int portNum, int baudRate, boolean withIoManager) {
         this.activity = activity;
@@ -206,10 +205,18 @@ public class AtOperator implements SerialInputOutputManager.Listener {
         if (!checkPortOpen()) {
             return;
         }
+        this.mac = patchMac;
         connectStatus = 1;
         currentInstruction = atInstruction.connectDevice(type, patchMac);
         currentInstructionType = InstructionType.COON;
         send(currentInstruction);
+    }
+
+    /**
+     * 重连
+     */
+    private void reconnectDevice() {
+
     }
 
     /**
@@ -240,7 +247,6 @@ public class AtOperator implements SerialInputOutputManager.Listener {
      * 订阅温度
      */
     private void subscribeTemp() {
-        lastNotifyTime = System.currentTimeMillis();
         if (!checkPortOpen()) {
             return;
         }
@@ -278,6 +284,7 @@ public class AtOperator implements SerialInputOutputManager.Listener {
         }
         String newData = sb.toString().replaceAll("\r\n", "");
 
+        //当前指令不为设备连接，但是返回了OK+LOST，表示设备异常中断
         if (currentInstructionType != InstructionType.COON) {
 
             if (newData.startsWith(ResultConstant.AT_LOST) || newData.endsWith(ResultConstant.AT_LOST)) {
@@ -377,43 +384,17 @@ public class AtOperator implements SerialInputOutputManager.Listener {
 
                 break;
             case NOTIFY://没有标识
-                long currentNotifyTime = System.currentTimeMillis();
-                if (currentNotifyTime - lastNotifyTime <= NOTIFY_INTERVAL) {//同一段数据\
-                    byteBuffer.put(data);
-                } else {//不同段数据
-
-                    byteBuffer.clear();
-                }
-                int bufferPosition = byteBuffer.position();
-                if (bufferPosition + data.length <= byteBuffer.capacity()) {
-                    byteBuffer.put(data);
-                } else {
-                    dataListener.receiveCurrentTemp(BleUtils.parseTempV1_5(byteBuffer.array()));
-
-                }
-
-         /*       if (isFirstArrive && newData.startsWith(ResultConstant.NOTIFY_SUCCESS)) {
-
-                    if (!isConnected()) {
-                        connectStatus = 2;
-                        connectStatusListener.onConnectSuccess();
-                    }
-                    Logger.w("订阅温度成功");
-                    //清空StringBuilder
+                if (newData.length() == ResultConstant.NOTIFY_SUCCESS.length() && isFirstArrive) {
+                    isFirstArrive = false;
+                    Logger.w("温度订阅成功 ：", newData);
                     sb.delete(0, sb.length());
-                    byteBuffer.clear();
-                    if (isFirstArrive) {
-                        isFirstArrive = false;
-                    }
-                } else if (byteBuffer.position() == byteBuffer.capacity()) {
-                    try {
-                        dataListener.receiveCurrentTemp(BleUtils.parseTempV1_5(byteBuffer.array()));
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                    Logger.w("实时温度 : ", new String(byteBuffer.array()));
-                    byteBuffer.clear();
-                }*/
+                } else if (newData.length() == getTempDataLength()) {
+                    Logger.w("实时温度：", BleUtils.parseTempV1_5(newData));
+                    sb.delete(0, sb.length());
+                } else if (newData.length() > 20) {
+                    Logger.w("newData length 大于20，出现脏数据，清空临时数据...");
+                    sb.delete(0, sb.length());
+                }
                 break;
             case SET_WAY:
                 if (newData.startsWith(ResultConstant.SET_WAY)) {
@@ -424,6 +405,7 @@ public class AtOperator implements SerialInputOutputManager.Listener {
             case NONE:
                 if (newData.startsWith(ResultConstant.AT_LOST)) {//断线或连接失败
                     Logger.w("设备断开。。。");
+                    connectStatusListener.onDisconnect(false);
                 }
                 break;
         }

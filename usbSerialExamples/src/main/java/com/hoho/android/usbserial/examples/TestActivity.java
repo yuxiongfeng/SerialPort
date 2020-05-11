@@ -178,7 +178,6 @@ public class TestActivity extends AppCompatActivity implements View.OnClickListe
         scanAdapter = new ScanAdapter(this, deviceList);
         scanAdapter.setListener(mac -> {
             atConnector.setPatchMac(mac);
-            atConnector.setPatchType(0);
             atConnector.connect(connectStatusListener, dataListener);
         });
         idRecyclerView.setAdapter(scanAdapter);

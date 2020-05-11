@@ -106,16 +106,16 @@ public class BleUtils {
                 //温度
                 float temp = (data & 0x3FFF) / 100.0f;
                 //采样
-            /*    int sample = (data & 0xC000) >> 14;
+                int sample = (data & 0xC000) >> 14;
                 if (sample == 1) {
                     sample = 1;
                 } else if (sample == 2) {
                     sample = 4;
                 } else {
                     sample = 24;
-                }*/
-                Logger.w("实时温度:", temp);
-                temps.add(new TempDataBean(temp));
+                }
+                Logger.w("实时温度:", temp," , 采样 : ",sample);
+                temps.add(new TempDataBean(temp,sample));
             }
         }
         return temps;
